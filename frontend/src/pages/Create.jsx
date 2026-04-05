@@ -3,51 +3,57 @@ import { useNavigate } from "react-router-dom";
 import { createLetter } from "../api";
 import LetterCard, { Divider, Label, Btn } from "../components/LetterCard";
 
-// ── Helpers date ─────────────────────────────────────────────
+// ── Helpers date ──────────────────────────────────────────────
 
-// Date min pour le champ <input type="date"> = aujourd'hui en heure locale
 function getTodayLocal() {
   const d = new Date();
   const p = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// Génère les créneaux horaires toutes les 30 min : ["00:00","00:30",…,"23:30"]
-function buildTimeSlots() {
-  const slots = [];
-  for (let h = 0; h < 24; h++) {
-    slots.push(`${String(h).padStart(2, "0")}:00`);
-    slots.push(`${String(h).padStart(2, "0")}:30`);
-  }
-  return slots;
-}
-const TIME_SLOTS = buildTimeSlots();
-
-// Combine date locale "YYYY-MM-DD" + heure "HH:MM" → ISO UTC pour le backend
 function toISO(dateStr, timeStr) {
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
-// Formate pour l'affichage dans l'écran de succès
 function formatDisplay(dateStr, timeStr) {
   const d = new Date(`${dateStr}T${timeStr}:00`);
   return d.toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
 }
 
-// ── Composant ────────────────────────────────────────────────
+// ── Créneaux horaires par période ─────────────────────────────
+const TIME_GROUPS = [
+  {
+    label: "Matin",
+    slots: ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00"],
+  },
+  {
+    label: "Après-midi",
+    slots: ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00"],
+  },
+  {
+    label: "Soir",
+    slots: ["18:00", "19:00", "20:00", "21:00", "22:00", "23:00"],
+  },
+  {
+    label: "Nuit",
+    slots: ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00"],
+  },
+];
+
+// ── Composant ─────────────────────────────────────────────────
 export default function Create() {
   const navigate = useNavigate();
-  const [title, setTitle]       = useState("");
-  const [content, setContent]   = useState("");
-  const [unlockDate, setUnlockDate] = useState(""); // "YYYY-MM-DD"
-  const [unlockTime, setUnlockTime] = useState("12:00"); // "HH:MM"
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [success, setSuccess]   = useState(null);
-  const [copied, setCopied]     = useState(false);
+  const [title, setTitle]           = useState("");
+  const [content, setContent]       = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [unlockDate, setUnlockDate] = useState("");
+  const [unlockTime, setUnlockTime] = useState("12:00");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+  const [success, setSuccess]       = useState(null);
+  const [copied, setCopied]         = useState(false);
   const textareaRef = useRef(null);
 
-  // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -59,24 +65,21 @@ export default function Create() {
     e.preventDefault();
     setError("");
 
-    if (!title.trim() || !content.trim() || !unlockDate) {
-      setError("Tous les champs sont requis.");
-      return;
+    if (!title.trim() || !content.trim() || !unlockDate || !recipientEmail.trim()) {
+      setError("Tous les champs sont requis."); return;
     }
-
-    // Vérification que la date+heure est dans le futur
     const chosen = new Date(`${unlockDate}T${unlockTime}:00`);
     if (chosen <= new Date()) {
-      setError("La date de déblocage doit être dans le futur.");
-      return;
+      setError("La date de déblocage doit être dans le futur."); return;
     }
 
     setLoading(true);
     try {
       const data = await createLetter({
-        title:     title.trim(),
-        content:   content.trim(),
-        unlock_at: toISO(unlockDate, unlockTime),
+        title:           title.trim(),
+        content:         content.trim(),
+        unlock_at:       toISO(unlockDate, unlockTime),
+        recipient_email: recipientEmail.trim(),
       });
       setSuccess(data);
     } catch (err) {
@@ -108,22 +111,18 @@ export default function Create() {
               S'ouvrira le <strong style={{ fontWeight: 500, color: "var(--ink2)" }}>{displayDate}</strong>
             </p>
           </div>
-
           <Divider />
-
           <div style={copyRowStyle}>
             <span style={copyUrlStyle}>{url}</span>
             <button onClick={copyLink} style={copyBtnStyle(copied)}>
               {copied ? "Copié !" : "Copier"}
             </button>
           </div>
-
           <Divider />
-
           <div style={{ display: "flex", gap: "0.9rem", justifyContent: "center", flexWrap: "wrap" }}>
             <Btn small onClick={() => {
               setSuccess(null); setTitle(""); setContent("");
-              setUnlockDate(""); setUnlockTime("12:00");
+              setUnlockDate(""); setUnlockTime("12:00"); setRecipientEmail("");
             }}>
               Nouvelle lettre
             </Btn>
@@ -136,7 +135,7 @@ export default function Create() {
     );
   }
 
-  // ── Formulaire ───────────────────────────────────────────────
+  // ── Formulaire ────────────────────────────────────────────────
   return (
     <main style={mainStyle}>
       <form onSubmit={handleSubmit}>
@@ -154,7 +153,7 @@ export default function Create() {
             />
           </div>
 
-          {/* Contenu */}
+          {/* Message */}
           <div style={{ marginBottom: "1.4rem" }}>
             <Label>Message</Label>
             <textarea
@@ -167,49 +166,73 @@ export default function Create() {
             />
           </div>
 
-          {/* Date + heure séparées */}
+          {/* Email destinataire */}
+          <div style={{ marginBottom: "1.4rem" }}>
+            <Label>Email du destinataire</Label>
+            <input
+              type="email"
+              value={recipientEmail}
+              onChange={e => setRecipientEmail(e.target.value)}
+              placeholder="destinataire@example.com"
+              style={{ ...inputStyle, fontFamily: "var(--ff-sans)", fontSize: "0.95rem" }}
+            />
+          </div>
+
+          {/* Sélecteur de date */}
           <div style={{ marginBottom: "1.8rem" }}>
             <Label>Débloquer le</Label>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
 
-              {/* Champ date */}
-              <input
-                type="date"
-                value={unlockDate}
-                min={getTodayLocal()}
-                onChange={e => setUnlockDate(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  flex: "1 1 140px",
-                  fontFamily: "var(--ff-sans)",
-                  fontSize: "0.9rem",
-                  minWidth: 0,
-                }}
-              />
+            {/* Champ date natif */}
+            <input
+              type="date"
+              value={unlockDate}
+              min={getTodayLocal()}
+              onChange={e => setUnlockDate(e.target.value)}
+              style={{ ...inputStyle, fontFamily: "var(--ff-sans)", fontSize: "0.95rem", marginBottom: "1.2rem" }}
+            />
 
-              {/* Select heure — toutes les 30 min */}
-              <select
-                value={unlockTime}
-                onChange={e => setUnlockTime(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  flex: "0 0 auto",
-                  fontFamily: "var(--ff-sans)",
-                  fontSize: "0.9rem",
-                  cursor: "pointer",
-                  appearance: "none",
-                  paddingRight: "1.2rem",
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a8c75'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "right 0 center",
-                }}
-              >
-                {TIME_SLOTS.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-
+            {/* Groupes d'heures */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.8rem" }}>
+              {TIME_GROUPS.map(group => (
+                <div key={group.label}>
+                  <div style={{ fontFamily: "var(--ff-sans)", fontSize: "0.6rem", letterSpacing: "0.15em", color: "var(--ink3)", textTransform: "uppercase", marginBottom: "0.35rem" }}>
+                    {group.label}
+                  </div>
+                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                    {group.slots.map(slot => {
+                      const selected = unlockTime === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setUnlockTime(slot)}
+                          style={{
+                            padding: "0.3rem 0.65rem",
+                            borderRadius: 2,
+                            border: `1px solid ${selected ? "var(--ink)" : "#d4bc9a"}`,
+                            background: selected ? "var(--ink)" : "transparent",
+                            color: selected ? "var(--cream)" : "var(--ink2)",
+                            fontFamily: "var(--ff-sans)",
+                            fontSize: "0.75rem",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
+
+            {/* Récapitulatif lisible */}
+            {unlockDate && (
+              <p style={{ marginTop: "1rem", fontFamily: "var(--ff-sans)", fontSize: "0.78rem", color: "var(--sepia)", fontStyle: "italic" }}>
+                La lettre s'ouvrira le {formatDisplay(unlockDate, unlockTime)}
+              </p>
+            )}
           </div>
 
           {error && (
@@ -230,36 +253,20 @@ export default function Create() {
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────
-const mainStyle = { maxWidth: 600, margin: "0 auto", padding: "1rem 1.2rem 4rem" };
-const h2Style   = { fontSize: "clamp(1.2rem, 4vw, 1.6rem)", fontWeight: 300, fontStyle: "italic" };
-
+// ── Styles ────────────────────────────────────────────────────
+const mainStyle  = { maxWidth: 600, margin: "0 auto", padding: "1rem 1.2rem 4rem" };
+const h2Style    = { fontSize: "clamp(1.2rem, 4vw, 1.6rem)", fontWeight: 300, fontStyle: "italic" };
 const inputStyle = {
-  width: "100%",
-  background: "transparent",
-  border: "none",
-  borderBottom: "1px solid #d4bc9a",
-  padding: "0.45rem 0",
-  fontFamily: "var(--ff-serif)",
-  fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)",
-  color: "var(--ink)",
-  outline: "none",
+  width: "100%", background: "transparent", border: "none",
+  borderBottom: "1px solid #d4bc9a", padding: "0.45rem 0",
+  fontFamily: "var(--ff-serif)", fontSize: "clamp(0.95rem, 2.5vw, 1.05rem)",
+  color: "var(--ink)", outline: "none",
 };
-
-const copyRowStyle = {
-  background: "var(--cream2)", borderRadius: 2,
-  padding: "0.75rem 0.9rem", display: "flex",
-  gap: "0.6rem", alignItems: "center",
-};
-const copyUrlStyle = {
-  fontFamily: "var(--ff-sans)", fontSize: "0.72rem",
-  color: "var(--ink2)", wordBreak: "break-all", flex: 1,
-};
-const copyBtnStyle = (copied) => ({
-  background: copied ? "var(--sepia)" : "var(--ink)",
-  color: "var(--cream)", border: "none", cursor: "pointer",
-  padding: "0.35rem 0.85rem", borderRadius: 2,
-  fontFamily: "var(--ff-sans)", fontSize: "0.65rem",
-  letterSpacing: "0.08em", whiteSpace: "nowrap",
-  transition: "background 0.2s",
+const copyRowStyle  = { background: "var(--cream2)", borderRadius: 2, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center" };
+const copyUrlStyle  = { fontFamily: "var(--ff-sans)", fontSize: "0.72rem", color: "var(--ink2)", wordBreak: "break-all", flex: 1 };
+const copyBtnStyle  = copied => ({
+  background: copied ? "var(--sepia)" : "var(--ink)", color: "var(--cream)",
+  border: "none", cursor: "pointer", padding: "0.35rem 0.85rem", borderRadius: 2,
+  fontFamily: "var(--ff-sans)", fontSize: "0.65rem", letterSpacing: "0.08em",
+  whiteSpace: "nowrap", transition: "background 0.2s",
 });
