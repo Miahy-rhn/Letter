@@ -1,47 +1,40 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
-/**
- * Crée une nouvelle lettre
- * @param {Object} payload { title, content, unlock_at }
- * @returns {Promise<{id, message, link}>}
- */
-export async function createLetter(payload) {
-  const res = await fetch(`${API_URL}/letters`, {
+// ─── Créer une lettre ─────────────────────────────────────────
+// Envoie title, content, unlock_at au backend.
+// Retourne { id, link } ou lance une erreur.
+export async function createLetter({ title, content, unlock_at }) {
+  const res = await fetch(`${BASE_URL}/letters`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ title, content, unlock_at }),
   });
 
+  const data = await res.json();
+
   if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Erreur lors de la création.");
+    throw new Error(data.error || "Erreur lors de la création.");
   }
 
-  return res.json();
+  return data; // { id, link, message }
 }
 
-/**
- * Récupère une lettre (locked ou unlocked)
- * **Important**: Le serveur ajoute server_time pour que Countdown
- * puisse synchroniser l'horloge client avec le serveur.
- * @param {string} id UUID de la lettre
- * @returns {Promise<Object>}
- */
+// ─── Lire une lettre ──────────────────────────────────────────
+// Interroge le backend avec l'UUID du lien.
+// Retourne :
+//   { status: "locked",    unlock_at, remaining_ms, server_time }
+//   { status: "unlocked",  id, title, content, unlock_at, created_at, server_time }
+//   null si la lettre n'existe pas (404)
 export async function readLetter(id) {
-  const res = await fetch(`${API_URL}/letters/${id}`);
+  const res = await fetch(`${BASE_URL}/letters/${id}`);
 
-  if (!res.ok) {
-    if (res.status === 404) {
-      throw new Error("Lettre introuvable.");
-    }
-    throw new Error("Erreur réseau.");
-  }
+  if (res.status === 404) return null;
 
   const data = await res.json();
-  
-  // ├─ Ajoute un timestamp serveur pour que Countdown puisse
-  // │  synchroniser l'horloge client (correction du skew)
-  data.server_time = new Date().toISOString();
-  
+
+  if (!res.ok) {
+    throw new Error(data.error || "Erreur lors de la lecture.");
+  }
+
   return data;
 }
