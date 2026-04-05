@@ -17,7 +17,7 @@ export default function Login({ onAuth }) {
     setLoading(true);
     try {
       await login({ email, password });
-      onAuth();           // notifie App.jsx que l'état auth a changé
+      onAuth();
       navigate("/inbox");
     } catch (err) {
       setError(err.message);
@@ -82,10 +82,10 @@ export default function Login({ onAuth }) {
   );
 }
 
-const mainStyle = { maxWidth: 480, margin: "0 auto", padding: "1rem 1.2rem 4rem" };
-const h2Style   = { fontSize: "clamp(1.2rem,4vw,1.5rem)", fontWeight: 300, fontStyle: "italic" };
-const metaStyle = { fontSize: "0.75rem", color: "var(--ink3)", fontFamily: "var(--ff-sans)", fontWeight: 300, marginTop: "0.3rem" };
-const errStyle  = { color: "var(--red)", fontFamily: "var(--ff-sans)", fontSize: "0.78rem", textAlign: "center", marginBottom: "1rem" };
+const mainStyle  = { maxWidth: 480, margin: "0 auto", padding: "1rem 1.2rem 4rem" };
+const h2Style    = { fontSize: "clamp(1.2rem,4vw,1.5rem)", fontWeight: 300, fontStyle: "italic" };
+const metaStyle  = { fontSize: "0.75rem", color: "var(--ink3)", fontFamily: "var(--ff-sans)", fontWeight: 300, marginTop: "0.3rem" };
+const errStyle   = { color: "var(--red)", fontFamily: "var(--ff-sans)", fontSize: "0.78rem", textAlign: "center", marginBottom: "1rem" };
 const inputStyle = {
   width: "100%", background: "transparent", border: "none",
   borderBottom: "1px solid #d4bc9a", padding: "0.45rem 0",

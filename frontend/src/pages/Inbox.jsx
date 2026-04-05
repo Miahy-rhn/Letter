@@ -44,7 +44,6 @@ export default function Inbox() {
   return (
     <main style={mainStyle}>
 
-      {/* En-tête boîte de réception */}
       <div style={{ marginBottom: "1.8rem" }}>
         <h2 style={{ fontSize: "clamp(1.1rem,3vw,1.4rem)", fontWeight: 300, fontStyle: "italic", color: "var(--ink2)" }}>
           {letters.length === 0
@@ -53,14 +52,13 @@ export default function Inbox() {
         </h2>
       </div>
 
-      {/* Liste des lettres */}
       {letters.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "3rem 1rem",
           color: "var(--ink3)", fontStyle: "italic", fontSize: "1rem",
           border: "1px dashed #d4bc9a", borderRadius: 2,
         }}>
-          Personne ne t'a encore écrit.<br />
+          Personne ne t'a encore écrit.
           <span style={{ fontSize: "0.8rem", fontStyle: "normal", fontFamily: "var(--ff-sans)", marginTop: "0.5rem", display: "block" }}>
             Partage ton adresse email à quelqu'un qui voudra t'écrire.
           </span>
@@ -101,15 +99,21 @@ function LetterRow({ letter, onClick }) {
         transition: "box-shadow 0.15s, transform 0.15s",
         boxShadow: "0 2px 12px rgba(44,36,22,0.07)",
       }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(44,36,22,0.13)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 12px rgba(44,36,22,0.07)"; e.currentTarget.style.transform = "none"; }}
+      onMouseEnter={e => {
+        e.currentTarget.style.boxShadow = "0 4px 20px rgba(44,36,22,0.13)";
+        e.currentTarget.style.transform = "translateY(-1px)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.boxShadow = "0 2px 12px rgba(44,36,22,0.07)";
+        e.currentTarget.style.transform = "none";
+      }}
     >
       {/* Icône statut */}
       <span style={{ fontSize: "1.4rem", flexShrink: 0, filter: locked ? "grayscale(0.4)" : "none" }}>
         {locked ? "🔒" : "✉"}
       </span>
 
-      {/* Contenu */}
+      {/* Titre + date */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: "clamp(0.95rem,2.5vw,1.05rem)",

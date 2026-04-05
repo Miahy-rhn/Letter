@@ -14,9 +14,16 @@ export default function Register({ onAuth }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (!email || !password || !confirm) { setError("Tous les champs sont requis."); return; }
-    if (password.length < 8)  { setError("Mot de passe trop court (8 caractères min)."); return; }
-    if (password !== confirm)  { setError("Les mots de passe ne correspondent pas."); return; }
+
+    if (!email || !password || !confirm) {
+      setError("Tous les champs sont requis."); return;
+    }
+    if (password.length < 8) {
+      setError("Mot de passe trop court (8 caractères min)."); return;
+    }
+    if (password !== confirm) {
+      setError("Les mots de passe ne correspondent pas."); return;
+    }
 
     setLoading(true);
     try {
